@@ -2,7 +2,6 @@ import Foundation
 import Security
 
 enum Keychain {
-    static let openAIKey = "openai-api-key"
     private static let service = "com.gagancreates.bucephalus"
 
     static func read(_ account: String) -> String? {

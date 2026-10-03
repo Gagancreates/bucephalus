@@ -1,7 +1,18 @@
 import SwiftUI
 
 enum Theme {
-    static let accent = Color(red: 0.93, green: 0.36, blue: 0.24)
+    /// Dark maroon, a shade lighter in dark mode so it doesn't sink into black.
+    static let accent = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.56, green: 0.12, blue: 0.21, alpha: 1)
+            : UIColor(red: 0.45, green: 0.09, blue: 0.17, alpha: 1)
+    })
+    /// Foreground for anything drawn on top of `accent`.
+    static let onAccent = Color.white
+    /// The only colour in the app, reserved for the live recording indicator.
+    static let recording = Color(red: 0.92, green: 0.26, blue: 0.24)
+    /// Background for content cards.
+    static let card = Color(.secondarySystemBackground)
 }
 
 extension TimeInterval {

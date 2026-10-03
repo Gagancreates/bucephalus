@@ -8,6 +8,12 @@ struct HomeView: View {
 
     @State private var isRecording = false
     @State private var showingSettings = false
+    @State private var path: [Meeting] = []
+    @State private var renameTarget: Meeting?
+    @State private var renameText = ""
+    @State private var showingRename = false
+    @State private var deleteTarget: Meeting?
+    @State private var showingDelete = false
 
     private var days: [(day: Date, meetings: [Meeting])] {
         Dictionary(grouping: meetings) { Calendar.current.startOfDay(for: $0.createdAt) }
@@ -16,7 +22,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if meetings.isEmpty {
                     emptyState
@@ -35,7 +41,26 @@ struct HomeView: View {
         }
         .fullScreenCover(isPresented: $isRecording) { RecordingView() }
         .sheet(isPresented: $showingSettings) { SettingsView() }
-        .task { resumeUnfinished() }
+        .alert("Rename meeting", isPresented: $showingRename) {
+            TextField("Meeting name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                let name = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty { renameTarget?.title = name }
+            }
+        }
+        .alert("Delete this meeting?", isPresented: $showingDelete) {
+            Button("Delete", role: .destructive) {
+                if let deleteTarget { delete(deleteTarget) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The recording, transcript, summary and notes will be removed.")
+        }
+        .task {
+            resumeUnfinished()
+            if let demo = DemoData.seedIfRequested(in: modelContext) { path = [demo] }
+        }
     }
 
     private var list: some View {
@@ -44,6 +69,17 @@ struct HomeView: View {
                 Section {
                     ForEach(group.meetings) { meeting in
                         NavigationLink(value: meeting) { MeetingRow(meeting: meeting) }
+                            .contextMenu {
+                                Button("Rename", systemImage: "pencil") {
+                                    renameTarget = meeting
+                                    renameText = meeting.title
+                                    showingRename = true
+                                }
+                                Button("Delete", systemImage: "trash", role: .destructive) {
+                                    deleteTarget = meeting
+                                    showingDelete = true
+                                }
+                            }
                     }
                     .onDelete { offsets in
                         offsets.map { group.meetings[$0] }.forEach(delete)
@@ -70,14 +106,24 @@ struct HomeView: View {
         } label: {
             Image(systemName: "mic.fill")
                 .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.onAccent)
                 .frame(width: 72, height: 72)
                 .background(Theme.accent, in: .circle)
-                .shadow(color: Theme.accent.opacity(0.35), radius: 16, y: 8)
+                .shadow(color: Theme.accent.opacity(0.4), radius: 18, y: 8)
         }
         .accessibilityLabel("Start recording")
         .sensoryFeedback(.impact(weight: .medium), trigger: isRecording)
+        .padding(.top, 28)
         .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        // Fades the list out behind the button instead of letting rows collide with it.
+        .background(
+            LinearGradient(
+                stops: [.init(color: .clear, location: 0), .init(color: Color(.systemBackground), location: 0.45)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
     }
 
     private func dayTitle(_ day: Date) -> String {
@@ -121,10 +167,10 @@ private struct MeetingRow: View {
                 case .transcribing, .summarizing, .recording:
                     Text("·")
                     Text(meeting.status == .summarizing ? "Summarising" : "Transcribing")
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(.primary)
                 case .failed:
                     Text("·")
-                    Text("Needs attention").foregroundStyle(Theme.accent)
+                    Text("Needs attention").foregroundStyle(.primary)
                 case .done:
                     EmptyView()
                 }

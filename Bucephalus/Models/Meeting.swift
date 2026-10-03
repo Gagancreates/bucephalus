@@ -15,6 +15,8 @@ struct MeetingSummary: Codable {
 
 @Model
 final class Meeting {
+    static let defaultTitle = "New meeting"
+
     var id: UUID
     var title: String
     var createdAt: Date
@@ -24,11 +26,12 @@ final class Meeting {
     var summaryData: Data?
     var statusRaw: String
     var errorMessage: String?
+    var notes: String = ""
 
     init(createdAt: Date = .now) {
         let id = UUID()
         self.id = id
-        self.title = "New meeting"
+        self.title = Meeting.defaultTitle
         self.createdAt = createdAt
         self.duration = 0
         self.audioFileName = "\(id.uuidString).caf"

@@ -20,6 +20,8 @@ Meeting notetakers like Granola cover calls on Zoom and Google Meet. Bucephalus 
 - Model picker that lists the models available to your key
 - Optional auto-generated meeting titles (5 words or fewer)
 - Summary and full transcript for every meeting, with share
+- A notes tab per meeting, with Markdown formatting as you type
+- Long press a meeting to rename or delete it
 - Retry for any failed step; the audio is always kept
 - Everything stored locally: no account, no server, no cloud sync
 
@@ -76,11 +78,11 @@ Bucephalus/
     Summarizer.swift         OpenAI and Anthropic clients, summary prompt
     MeetingProcessor.swift   Transcribe → summarise pipeline
     Keychain.swift           API key storage
-  Views/                     Home, recording, meeting detail, settings
+  Views/                     Home, recording, meeting detail, notes, settings
+  DemoData.swift             Sample meeting, added when launched with -demo
 ```
 
 ## Roadmap
 
 - Speaker labels (who said what)
-- Renaming meetings
 - Search across meetings

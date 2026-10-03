@@ -36,15 +36,19 @@ final class MeetingProcessor {
 
             meeting.status = .summarizing
             save(meeting)
-            guard let key = Keychain.read(Keychain.openAIKey), !key.isEmpty else {
-                throw SummarizerError.missingKey
+            let provider = Provider.current
+            guard let key = Keychain.read(provider.keychainAccount), !key.isEmpty else {
+                throw LLMError.missingKey(provider)
             }
-            let model = UserDefaults.standard.string(forKey: SummarizerSettings.modelKey)
-                ?? SummarizerSettings.defaultModel
-            let summary = try await OpenAISummarizer(apiKey: key, model: model)
+            let client = LLMClient(provider: provider, apiKey: key)
+            let summary = try await Summarizer(client: client, model: provider.selectedModel)
                 .summarize(transcript: meeting.transcript ?? "")
             meeting.summary = summary
-            meeting.title = summary.title
+            let autoTitle = UserDefaults.standard.object(forKey: SettingsKeys.autoTitle) as? Bool ?? true
+            // Never overwrite a name the user typed.
+            if autoTitle, !summary.title.isEmpty, meeting.title == Meeting.defaultTitle {
+                meeting.title = summary.title
+            }
             meeting.status = .done
         } catch {
             meeting.status = .failed

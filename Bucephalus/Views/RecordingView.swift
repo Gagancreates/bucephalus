@@ -14,7 +14,7 @@ struct RecordingView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Circle()
-                    .fill(Theme.accent)
+                    .fill(Theme.recording)
                     .frame(width: 8, height: 8)
                     .opacity(recorder.isRecording ? 1 : 0.3)
                 Text(recorder.isRecording ? "Recording" : "Starting")
@@ -45,7 +45,7 @@ struct RecordingView: View {
 
             Button(action: stop) {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(.white)
+                    .fill(Theme.onAccent)
                     .frame(width: 26, height: 26)
                     .frame(width: 80, height: 80)
                     .background(Theme.accent, in: .circle)
@@ -102,7 +102,7 @@ struct WaveformView: View {
             HStack(alignment: .center, spacing: 3) {
                 ForEach(levels.indices, id: \.self) { index in
                     Capsule()
-                        .fill(Theme.accent.opacity(0.35 + 0.65 * Double(index) / Double(levels.count)))
+                        .fill(Theme.accent.opacity(0.2 + 0.8 * Double(index) / Double(levels.count)))
                         .frame(height: max(4, levels[index] * proxy.size.height))
                 }
             }

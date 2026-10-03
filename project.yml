@@ -1,28 +1,28 @@
-name: BusyFailers
+name: Bucephalus
 options:
   bundleIdPrefix: com.gagancreates
   deploymentTarget:
     iOS: "26.0"
 targets:
-  BusyFailers:
+  Bucephalus:
     type: application
     platform: iOS
     sources:
-      - BusyFailers
+      - Bucephalus
     info:
-      path: BusyFailers/Info.plist
+      path: Bucephalus/Info.plist
       properties:
-        CFBundleDisplayName: Busy Failers
+        CFBundleDisplayName: Bucephalus
         UILaunchScreen: {}
         UIBackgroundModes:
           - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSMicrophoneUsageDescription: Busy Failers records your conversations so it can transcribe and summarise them.
-        NSSpeechRecognitionUsageDescription: Busy Failers transcribes your recordings on this iPhone.
+        NSMicrophoneUsageDescription: Bucephalus records your conversations so it can transcribe and summarise them.
+        NSSpeechRecognitionUsageDescription: Bucephalus transcribes your recordings on this iPhone.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gagancreates.busyfailers
+        PRODUCT_BUNDLE_IDENTIFIER: com.gagancreates.bucephalus
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Busy Failers</string>
+	<string>Bucephalus</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -21,9 +21,9 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Busy Failers records your conversations so it can transcribe and summarise them.</string>
+	<string>Bucephalus records your conversations so it can transcribe and summarise them.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Busy Failers transcribes your recordings on this iPhone.</string>
+	<string>Bucephalus transcribes your recordings on this iPhone.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

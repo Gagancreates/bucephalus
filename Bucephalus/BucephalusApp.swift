@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 @main
-struct BusyFailersApp: App {
+struct BucephalusApp: App {
     @State private var processor = MeetingProcessor()
 
     var body: some Scene {

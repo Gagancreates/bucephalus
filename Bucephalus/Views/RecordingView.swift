@@ -67,7 +67,7 @@ struct RecordingView: View {
     private func start() async {
         guard meeting == nil else { return }
         guard await recorder.requestPermission() else {
-            problem = "Allow microphone access for Busy Failers in Settings."
+            problem = "Allow microphone access for Bucephalus in Settings."
             return
         }
         let meeting = Meeting()

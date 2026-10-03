@@ -1,0 +1,30 @@
+name: BusyFailers
+options:
+  bundleIdPrefix: com.gagancreates
+  deploymentTarget:
+    iOS: "26.0"
+targets:
+  BusyFailers:
+    type: application
+    platform: iOS
+    sources:
+      - BusyFailers
+    info:
+      path: BusyFailers/Info.plist
+      properties:
+        CFBundleDisplayName: Busy Failers
+        UILaunchScreen: {}
+        UIBackgroundModes:
+          - audio
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSMicrophoneUsageDescription: Busy Failers records your conversations so it can transcribe and summarise them.
+        NSSpeechRecognitionUsageDescription: Busy Failers transcribes your recordings on this iPhone.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gagancreates.busyfailers
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"

@@ -26,5 +26,6 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: C5A9D5ATPL
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"

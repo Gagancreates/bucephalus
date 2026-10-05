@@ -13,42 +13,47 @@ struct MeetingSummary: Codable {
     var actionItems: [String]
 }
 
-@Model
-final class Meeting {
-    static let defaultTitle = "New meeting"
+/// The current stored shape of a meeting. See `Storage.swift` before changing any stored property.
+typealias Meeting = SchemaV1.Meeting
 
-    var id: UUID
-    var title: String
-    var createdAt: Date
-    var duration: TimeInterval
-    var audioFileName: String
-    var transcript: String?
-    var summaryData: Data?
-    var statusRaw: String
-    var errorMessage: String?
-    var notes: String = ""
+extension SchemaV1 {
+    @Model
+    final class Meeting {
+        static let defaultTitle = "New meeting"
 
-    init(createdAt: Date = .now) {
-        let id = UUID()
-        self.id = id
-        self.title = Meeting.defaultTitle
-        self.createdAt = createdAt
-        self.duration = 0
-        self.audioFileName = "\(id.uuidString).caf"
-        self.statusRaw = MeetingStatus.recording.rawValue
-    }
+        var id: UUID
+        var title: String
+        var createdAt: Date
+        var duration: TimeInterval
+        var audioFileName: String
+        var transcript: String?
+        var summaryData: Data?
+        var statusRaw: String
+        var errorMessage: String?
+        var notes: String = ""
 
-    var status: MeetingStatus {
-        get { MeetingStatus(rawValue: statusRaw) ?? .failed }
-        set { statusRaw = newValue.rawValue }
-    }
+        init(createdAt: Date = .now) {
+            let id = UUID()
+            self.id = id
+            self.title = Meeting.defaultTitle
+            self.createdAt = createdAt
+            self.duration = 0
+            self.audioFileName = "\(id.uuidString).caf"
+            self.statusRaw = MeetingStatus.recording.rawValue
+        }
 
-    var summary: MeetingSummary? {
-        get { summaryData.flatMap { try? JSONDecoder().decode(MeetingSummary.self, from: $0) } }
-        set { summaryData = newValue.flatMap { try? JSONEncoder().encode($0) } }
-    }
+        var status: MeetingStatus {
+            get { MeetingStatus(rawValue: statusRaw) ?? .failed }
+            set { statusRaw = newValue.rawValue }
+        }
 
-    var audioURL: URL {
-        URL.documentsDirectory.appending(path: audioFileName)
+        var summary: MeetingSummary? {
+            get { summaryData.flatMap { try? JSONDecoder().decode(MeetingSummary.self, from: $0) } }
+            set { summaryData = newValue.flatMap { try? JSONEncoder().encode($0) } }
+        }
+
+        var audioURL: URL {
+            URL.documentsDirectory.appending(path: audioFileName)
+        }
     }
 }

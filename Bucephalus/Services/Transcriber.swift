@@ -1,13 +1,25 @@
 import AVFoundation
 import Speech
 
+/// A word (or the space and punctuation around it) with where it falls in the recording.
+struct TimedWord: Sendable {
+    let text: String
+    let start: Double
+    let end: Double
+}
+
+struct Transcription: Sendable {
+    let text: String
+    let words: [TimedWord]
+}
+
 protocol Transcribing {
-    func transcribe(fileAt url: URL) async throws -> String
+    func transcribe(fileAt url: URL) async throws -> Transcription
 }
 
 /// On-device transcription with Apple's SpeechAnalyzer.
 struct AppleTranscriber: Transcribing {
-    func transcribe(fileAt url: URL) async throws -> String {
+    func transcribe(fileAt url: URL) async throws -> Transcription {
         guard SpeechTranscriber.isAvailable else { throw TranscriberError.unavailable }
 
         let locale = await Self.bestLocale()
@@ -15,7 +27,8 @@ struct AppleTranscriber: Transcribing {
             locale: locale,
             transcriptionOptions: [],
             reportingOptions: [],
-            attributeOptions: []
+            // Word timings, so each word can be matched to whoever was speaking at that moment.
+            attributeOptions: [.audioTimeRange]
         )
 
         // First use downloads the language model; after that it's fully offline.
@@ -26,8 +39,19 @@ struct AppleTranscriber: Transcribing {
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         let file = try AVAudioFile(forReading: url)
 
-        async let collected = transcriber.results.reduce(into: "") { text, result in
-            text += String(result.text.characters)
+        async let collected = transcriber.results.reduce(into: [TimedWord]()) { words, result in
+            let phraseStart = result.range.start.seconds
+            let phraseEnd = result.range.end.seconds
+            for run in result.text.runs {
+                let text = String(result.text[run.range].characters)
+                if let range = run[AttributeScopes.SpeechAttributes.TimeRangeAttribute.self] {
+                    words.append(TimedWord(text: text, start: range.start.seconds, end: range.end.seconds))
+                } else {
+                    // Spaces and punctuation carry no timing; give them their neighbour's.
+                    let at = words.last?.end ?? phraseStart
+                    words.append(TimedWord(text: text, start: at, end: min(at, phraseEnd)))
+                }
+            }
         }
 
         if let lastSample = try await analyzer.analyzeSequence(from: file) {
@@ -36,9 +60,10 @@ struct AppleTranscriber: Transcribing {
             await analyzer.cancelAndFinishNow()
         }
 
-        let text = try await collected.trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = try await collected
+        let text = words.map(\.text).joined().trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw TranscriberError.noSpeech }
-        return text
+        return Transcription(text: text, words: words)
     }
 
     private static func bestLocale() async -> Locale {

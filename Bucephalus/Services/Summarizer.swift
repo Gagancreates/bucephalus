@@ -193,9 +193,12 @@ struct Summarizer {
     let model: String
 
     private static let instructions = """
-    You write meeting notes from a raw transcript of an in-person conversation. The transcript has \
-    no speaker labels and may contain recognition errors; infer meaning from context and never \
-    invent facts. Reply with only a JSON object, no other text, with exactly these keys:
+    You write meeting notes from a raw transcript of an in-person conversation. It may contain \
+    recognition errors; infer meaning from context and never invent facts. When lines start with a \
+    speaker label ("Speaker 1:", or a name), the labels come from automatic voice separation: use them \
+    to say who said or agreed to what, keep the labels exactly as written, and use a real name instead \
+    only when the conversation makes it obvious. Reply with only a JSON object, no other text, with \
+    exactly these keys:
     "title": a specific heading for the meeting, at most 5 words,
     "overview": 2-3 sentences on what the conversation was about and where it landed,
     "key_points": array of short strings, the substance of what was discussed,
@@ -205,7 +208,8 @@ struct Summarizer {
     """
 
     func summarize(transcript: String) async throws -> MeetingSummary {
-        let text = try await client.complete(system: Self.instructions, user: transcript, model: model)
+        let style = SummaryStyle.current.instructions.map { "\n" + $0 } ?? ""
+        let text = try await client.complete(system: Self.instructions + style, user: transcript, model: model)
         guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}") else {
             throw LLMError.api("The model didn't return a readable summary.")
         }

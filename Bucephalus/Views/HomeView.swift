@@ -4,16 +4,28 @@ import SwiftUI
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(MeetingProcessor.self) private var processor
-    @Query(sort: \Meeting.createdAt, order: .reverse) private var meetings: [Meeting]
+    @Environment(RecordingController.self) private var recording
+    @Query(sort: \Meeting.createdAt, order: .reverse) private var allMeetings: [Meeting]
 
-    @State private var isRecording = false
-    @State private var showingSettings = false
-    @State private var path: [Meeting] = []
+    let filter: MeetingFilter
+    @Binding var path: [Meeting]
+    @Binding var isSearching: Bool
+    let openDrawer: () -> Void
+
+    @State private var searchText = ""
+    @State private var recordingError: String?
     @State private var renameTarget: Meeting?
     @State private var renameText = ""
     @State private var showingRename = false
     @State private var deleteTarget: Meeting?
     @State private var showingDelete = false
+
+    private var meetings: [Meeting] {
+        let filtered = filter == .starred ? allMeetings.filter(\.isStarred) : allMeetings
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return filtered }
+        return filtered.filter { $0.matches(query) }
+    }
 
     private var days: [(day: Date, meetings: [Meeting])] {
         Dictionary(grouping: meetings) { Calendar.current.startOfDay(for: $0.createdAt) }
@@ -30,17 +42,42 @@ struct HomeView: View {
                     list
                 }
             }
-            .navigationTitle("Meetings")
+            .navigationTitle(filter.title)
             .navigationDestination(for: Meeting.self) { MeetingDetailView(meeting: $0) }
+            // Under the title, not iOS 26's bottom search bar, which would sit on top of the record button.
+            .searchable(text: $searchText, isPresented: $isSearching,
+                        placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Titles, transcripts, notes")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Settings", systemImage: "gearshape") { showingSettings = true }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Menu", systemImage: "line.3.horizontal", action: openDrawer)
                 }
             }
-            .safeAreaInset(edge: .bottom) { recordButton }
+            .safeAreaInset(edge: .bottom) {
+                if !recording.isActive { recordButton }
+            }
         }
-        .fullScreenCover(isPresented: $isRecording) { RecordingView() }
-        .sheet(isPresented: $showingSettings) { SettingsView() }
+        // While recording in the background, a bar on every screen leads back to the recorder.
+        .safeAreaInset(edge: .bottom) {
+            if recording.isActive && recording.isMinimized {
+                RecordingBar()
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy, value: recording.isMinimized)
+        // Driven by the controller, so a recording started from the lock screen shows up here too.
+        .fullScreenCover(isPresented: Binding(
+            get: { recording.isActive && !recording.isMinimized },
+            set: { if !$0 { recording.isMinimized = true } }
+        )) {
+            RecordingView()
+        }
+        .alert("Can't record", isPresented: Binding(get: { recordingError != nil }, set: { if !$0 { recordingError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(recordingError ?? "")
+        }
         .alert("Rename meeting", isPresented: $showingRename) {
             TextField("Meeting name", text: $renameText)
             Button("Cancel", role: .cancel) {}
@@ -59,6 +96,11 @@ struct HomeView: View {
         }
         .task {
             resumeUnfinished()
+            if !recording.isActive { await recording.endLiveActivities() }
+            if DemoData.startsRecording || DemoData.startsMinimized {
+                try? await recording.start()
+                if DemoData.startsMinimized { recording.isMinimized = true }
+            }
             if let demo = DemoData.seedIfRequested(in: modelContext) { path = [demo] }
         }
     }
@@ -69,7 +111,18 @@ struct HomeView: View {
                 Section {
                     ForEach(group.meetings) { meeting in
                         NavigationLink(value: meeting) { MeetingRow(meeting: meeting) }
+                            .swipeActions(edge: .leading) {
+                                Button(meeting.isStarred ? "Unstar" : "Star",
+                                       systemImage: meeting.isStarred ? "star.slash" : "star") {
+                                    meeting.isStarred.toggle()
+                                }
+                                .tint(.yellow)
+                            }
                             .contextMenu {
+                                Button(meeting.isStarred ? "Unstar" : "Star",
+                                       systemImage: meeting.isStarred ? "star.slash" : "star") {
+                                    meeting.isStarred.toggle()
+                                }
                                 Button("Rename", systemImage: "pencil") {
                                     renameTarget = meeting
                                     renameText = meeting.title
@@ -92,18 +145,27 @@ struct HomeView: View {
         .listStyle(.plain)
     }
 
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView(
-            "No meetings yet",
-            systemImage: "waveform",
-            description: Text("Tap the button below, put your phone on the table, and talk.")
-        )
+        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+            ContentUnavailableView.search(text: searchText)
+        } else if filter == .starred {
+            ContentUnavailableView(
+                "No starred meetings",
+                systemImage: "star",
+                description: Text("Swipe right on a meeting, or long-press it, to star it.")
+            )
+        } else {
+            ContentUnavailableView(
+                "No meetings yet",
+                systemImage: "waveform",
+                description: Text("Tap the button below, put your phone on the table, and talk.")
+            )
+        }
     }
 
     private var recordButton: some View {
-        Button {
-            isRecording = true
-        } label: {
+        Button(action: startRecording) {
             Image(systemName: "mic.fill")
                 .font(.system(size: 26, weight: .medium))
                 .foregroundStyle(Theme.onAccent)
@@ -112,7 +174,7 @@ struct HomeView: View {
                 .shadow(color: Theme.accent.opacity(0.4), radius: 18, y: 8)
         }
         .accessibilityLabel("Start recording")
-        .sensoryFeedback(.impact(weight: .medium), trigger: isRecording)
+        .sensoryFeedback(.impact(weight: .medium), trigger: recording.isActive)
         .padding(.top, 28)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
@@ -124,6 +186,16 @@ struct HomeView: View {
             )
             .ignoresSafeArea()
         )
+    }
+
+    private func startRecording() {
+        Task {
+            do {
+                try await recording.start()
+            } catch {
+                recordingError = error.localizedDescription
+            }
+        }
     }
 
     private func dayTitle(_ day: Date) -> String {
@@ -139,7 +211,8 @@ struct HomeView: View {
 
     // Picks up anything left mid-flight by a crash or a force quit.
     private func resumeUnfinished() {
-        for meeting in meetings where [.recording, .transcribing, .summarizing].contains(meeting.status) {
+        for meeting in allMeetings where meeting.status.isInProgress
+            && meeting.id != recording.meeting?.id {
             if FileManager.default.fileExists(atPath: meeting.audioURL.path) {
                 processor.enqueue(meeting)
             } else {
@@ -154,9 +227,16 @@ private struct MeetingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(meeting.title)
-                .font(.body.weight(.medium))
-                .lineLimit(1)
+            HStack(spacing: 6) {
+                Text(meeting.title)
+                    .font(.body.weight(.medium))
+                    .lineLimit(1)
+                if meeting.isStarred {
+                    Image(systemName: "star.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.yellow)
+                }
+            }
             HStack(spacing: 6) {
                 Text(meeting.createdAt.formatted(date: .omitted, time: .shortened))
                 if meeting.duration > 0 {
@@ -164,9 +244,9 @@ private struct MeetingRow: View {
                     Text(meeting.duration.shortDurationString)
                 }
                 switch meeting.status {
-                case .transcribing, .summarizing, .recording:
+                case .transcribing, .diarizing, .summarizing, .recording:
                     Text("·")
-                    Text(meeting.status == .summarizing ? "Summarising" : "Transcribing")
+                    Text(meeting.status.progressLabel)
                         .foregroundStyle(.primary)
                 case .failed:
                     Text("·")

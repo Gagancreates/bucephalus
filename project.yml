@@ -3,12 +3,19 @@ options:
   bundleIdPrefix: com.gagancreates
   deploymentTarget:
     iOS: "26.0"
+packages:
+  FluidAudio:
+    url: https://github.com/FluidInference/FluidAudio
+    from: 0.17.5
 targets:
   Bucephalus:
     type: application
     platform: iOS
     sources:
       - Bucephalus
+    dependencies:
+      - target: BucephalusWidgets
+      - package: FluidAudio
     info:
       path: Bucephalus/Info.plist
       properties:
@@ -20,9 +27,31 @@ targets:
           - UIInterfaceOrientationPortrait
         NSMicrophoneUsageDescription: Bucephalus records your conversations so it can transcribe and summarise them.
         NSSpeechRecognitionUsageDescription: Bucephalus transcribes your recordings on this iPhone.
+        NSSupportsLiveActivities: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gagancreates.bucephalus
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: C5A9D5ATPL
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+  BucephalusWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - BucephalusWidgets
+      - Bucephalus/Shared
+    info:
+      path: BucephalusWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Bucephalus
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gagancreates.bucephalus.widgets
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic

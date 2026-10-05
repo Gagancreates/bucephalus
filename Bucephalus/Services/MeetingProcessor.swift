@@ -28,10 +28,20 @@ final class MeetingProcessor {
                 meeting.duration = Double(file.length) / file.fileFormat.sampleRate
             }
 
-            if meeting.transcript == nil {
+            // Older meetings and interrupted runs have no segments yet; (re)build them with speakers.
+            if meeting.transcript == nil || meeting.segments == nil {
                 meeting.status = .transcribing
                 save(meeting)
-                meeting.transcript = try await transcriber.transcribe(fileAt: meeting.audioURL)
+                let transcription = try await transcriber.transcribe(fileAt: meeting.audioURL)
+
+                meeting.status = .diarizing
+                save(meeting)
+                // Speaker labels are a bonus: if this fails (say, the one-time model download can't
+                // happen offline), keep the transcript as paragraphs and carry on.
+                let turns = (try? await SpeakerDiarizer.turns(inFileAt: meeting.audioURL)) ?? []
+                meeting.segments = TranscriptBuilder.segments(words: transcription.words, turns: turns)
+                meeting.transcript = transcription.text
+                save(meeting)
             }
 
             meeting.status = .summarizing
@@ -42,7 +52,7 @@ final class MeetingProcessor {
             }
             let client = LLMClient(provider: provider, apiKey: key)
             let summary = try await Summarizer(client: client, model: provider.selectedModel)
-                .summarize(transcript: meeting.transcript ?? "")
+                .summarize(transcript: meeting.transcriptForSummary)
             meeting.summary = summary
             let autoTitle = UserDefaults.standard.object(forKey: SettingsKeys.autoTitle) as? Bool ?? true
             // Never overwrite a name the user typed.
@@ -50,6 +60,10 @@ final class MeetingProcessor {
                 meeting.title = summary.title
             }
             meeting.status = .done
+            // With "Keep audio" off, the recording goes once everything it's needed for is done.
+            if !AppSettings.keepsAudio {
+                try? FileManager.default.removeItem(at: meeting.audioURL)
+            }
         } catch {
             meeting.status = .failed
             meeting.errorMessage = error.localizedDescription

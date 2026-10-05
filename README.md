@@ -16,12 +16,15 @@ Meeting notetakers like Granola cover calls on Zoom and Google Meet. Bucephalus 
 
 - Background recording that survives a locked screen and resumes after a phone call
 - On-device transcription, offline after the first model download
+- Speaker labels (who said what) on-device with FluidAudio, with tap-to-rename
 - Summaries from OpenAI or Anthropic, using your own API key
 - Model picker that lists the models available to your key
 - Optional auto-generated meeting titles (5 words or fewer)
 - Summary and full transcript for every meeting, with share
 - A notes tab per meeting, with Markdown formatting as you type
-- Long press a meeting to rename or delete it
+- Long press a meeting to rename, star or delete it; search across every meeting
+- Lock screen Live Activity with pause and stop, plus Action Button, Siri and Control Center triggers
+- Settings for summary style, audio quality, appearance, export and backups
 - Retry for any failed step; the audio is always kept
 - Everything stored locally: no account, no server, no cloud sync
 
@@ -84,5 +87,5 @@ Bucephalus/
 
 ## Roadmap
 
-- Speaker labels (who said what)
-- Search across meetings
+- Ask questions across all meetings
+- Action items to Apple Reminders

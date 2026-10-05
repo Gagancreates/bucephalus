@@ -11,6 +11,8 @@ struct MeetingDetailView: View {
     }
 
     @State private var tab: Tab = Tab(rawValue: (DemoData.tab ?? "").capitalized) ?? .summary
+    @State private var renamingSpeaker: Int?
+    @State private var speakerName = ""
 
     var body: some View {
         ScrollView {
@@ -34,7 +36,22 @@ struct MeetingDetailView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Rename speaker", isPresented: Binding(get: { renamingSpeaker != nil }, set: { if !$0 { renamingSpeaker = nil } })) {
+            TextField("Name", text: $speakerName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                if let renamingSpeaker { meeting.rename(speaker: renamingSpeaker, to: speakerName) }
+            }
+        } message: {
+            Text("Used everywhere this voice appears in this meeting, including the summary.")
+        }
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(meeting.isStarred ? "Unstar" : "Star", systemImage: meeting.isStarred ? "star.fill" : "star") {
+                    meeting.isStarred.toggle()
+                }
+                .tint(meeting.isStarred ? .yellow : nil)
+            }
             if let shareText {
                 ToolbarItem(placement: .topBarTrailing) {
                     ShareLink(item: shareText)
@@ -58,13 +75,13 @@ struct MeetingDetailView: View {
     private var summaryContent: some View {
         if let summary = meeting.summary {
             VStack(alignment: .leading, spacing: 12) {
-                Text(summary.overview)
+                Text(meeting.resolvingSpeakerNames(in: summary.overview))
                     .font(.callout)
                     .lineSpacing(4)
                     .card()
-                SummarySection(title: "Key points", items: summary.keyPoints)
-                SummarySection(title: "Decisions", icon: "checkmark", items: summary.decisions)
-                SummarySection(title: "Action items", icon: "circle", items: summary.actionItems)
+                SummarySection(title: "Key points", items: summary.keyPoints.map(meeting.resolvingSpeakerNames))
+                SummarySection(title: "Decisions", icon: "checkmark", items: summary.decisions.map(meeting.resolvingSpeakerNames))
+                SummarySection(title: "Action items", icon: "circle", items: summary.actionItems.map(meeting.resolvingSpeakerNames))
             }
             .textSelection(.enabled)
         } else {
@@ -75,20 +92,52 @@ struct MeetingDetailView: View {
     @ViewBuilder
     private var transcriptContent: some View {
         if let transcript = meeting.transcript {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("\(transcript.split(whereSeparator: \.isWhitespace).count) words · transcribed on this iPhone")
+            VStack(alignment: .leading, spacing: 18) {
+                Text(transcriptCaption(for: transcript))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(transcript)
-                    .font(.callout)
-                    .lineSpacing(6)
-                    .foregroundStyle(.primary.opacity(0.85))
-                    .textSelection(.enabled)
+
+                if let segments = meeting.segments, !segments.isEmpty {
+                    ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
+                        TranscriptSegmentView(
+                            segment: segment,
+                            // Label a turn only where the speaker changes.
+                            speakerLabel: speakerLabel(for: segment, after: index > 0 ? segments[index - 1] : nil),
+                            onRename: { speaker in
+                                let current = meeting.name(for: speaker)
+                                speakerName = current == "Speaker \(speaker)" ? "" : current
+                                renamingSpeaker = speaker
+                            }
+                        )
+                    }
+                } else {
+                    Text(transcript)
+                        .font(.callout)
+                        .lineSpacing(6)
+                        .foregroundStyle(.primary.opacity(0.85))
+                        .textSelection(.enabled)
+                }
             }
             .card()
         } else {
             statusContent
         }
+    }
+
+    private func transcriptCaption(for transcript: String) -> String {
+        var parts = ["\(transcript.split(whereSeparator: \.isWhitespace).count) words"]
+        if meeting.hasSpeakers {
+            parts.append("\(meeting.speakers.count) speakers, tap a name to rename")
+        } else {
+            parts.append("transcribed on this iPhone")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func speakerLabel(for segment: TranscriptSegment, after previous: TranscriptSegment?) -> SpeakerLabel? {
+        guard meeting.hasSpeakers, let speaker = segment.speaker, previous?.speaker != speaker else { return nil }
+        let order = meeting.speakers.firstIndex(of: speaker) ?? 0
+        return SpeakerLabel(speaker: speaker, name: meeting.name(for: speaker), color: Theme.speakerColor(order))
     }
 
     private var notesContent: some View {
@@ -108,7 +157,7 @@ struct MeetingDetailView: View {
         default:
             HStack(spacing: 12) {
                 ProgressView()
-                Text(meeting.status == .summarizing ? "Summarising…" : "Transcribing on this iPhone…")
+                Text(meeting.status == .transcribing ? "Transcribing on this iPhone…" : "\(meeting.status.progressLabel)…")
                     .foregroundStyle(.secondary)
             }
             .padding(.top, 8)
@@ -116,19 +165,65 @@ struct MeetingDetailView: View {
     }
 
     private var shareText: String? {
-        guard let summary = meeting.summary else { return meeting.transcript }
-        var lines = [meeting.title, "", summary.overview]
+        guard let summary = meeting.summary else { return meeting.transcriptForSummary.nilIfEmpty }
+        let named = meeting.resolvingSpeakerNames
+        var lines = [meeting.title, "", named(summary.overview)]
         for (title, items) in [
             ("Key points", summary.keyPoints),
             ("Decisions", summary.decisions),
             ("Action items", summary.actionItems),
         ] where !items.isEmpty {
-            lines += ["", title] + items.map { "• \($0)" }
+            lines += ["", title] + items.map { "• \(named($0))" }
         }
         if !meeting.notes.isEmpty {
             lines += ["", "Notes", meeting.notes]
         }
         return lines.joined(separator: "\n")
+    }
+}
+
+private struct SpeakerLabel {
+    let speaker: Int
+    let name: String
+    let color: Color
+}
+
+private struct TranscriptSegmentView: View {
+    let segment: TranscriptSegment
+    let speakerLabel: SpeakerLabel?
+    let onRename: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let speakerLabel {
+                HStack(spacing: 8) {
+                    Button {
+                        onRename(speakerLabel.speaker)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(speakerLabel.color)
+                                .frame(width: 7, height: 7)
+                            Text(speakerLabel.name)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(speakerLabel.color)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Rename this speaker")
+
+                    Text(segment.start.clockString)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.top, 2)
+            }
+            Text(segment.text)
+                .font(.callout)
+                .lineSpacing(6)
+                .foregroundStyle(.primary.opacity(0.85))
+                .textSelection(.enabled)
+        }
     }
 }
 
@@ -180,4 +275,8 @@ extension View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

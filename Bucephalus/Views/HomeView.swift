@@ -13,6 +13,7 @@ struct HomeView: View {
     let openDrawer: () -> Void
 
     @State private var searchText = ""
+    @FocusState private var searchFocused: Bool
     @State private var recordingError: String?
     @State private var renameTarget: Meeting?
     @State private var renameText = ""
@@ -44,14 +45,13 @@ struct HomeView: View {
             }
             .navigationTitle(filter.title)
             .navigationDestination(for: Meeting.self) { MeetingDetailView(meeting: $0) }
-            // Under the title, not iOS 26's bottom search bar, which would sit on top of the record button.
-            .searchable(text: $searchText, isPresented: $isSearching,
-                        placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Titles, transcripts, notes")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Menu", systemImage: "line.3.horizontal", action: openDrawer)
-                }
-            }
+            // Our own header instead of the system bar: the system bar re-lays out its large title and
+            // search field while the drawer slides the screen, so they drifted left and snapped back.
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) { header }
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: isSearching) { _, searching in searchFocused = searching }
+            .onChange(of: searchFocused) { _, focused in if focused { isSearching = true } }
             .safeAreaInset(edge: .bottom) {
                 if !recording.isActive { recordButton }
             }
@@ -103,6 +103,56 @@ struct HomeView: View {
             }
             if let demo = DemoData.seedIfRequested(in: modelContext) { path = [demo] }
         }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: openDrawer) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 44, height: 44)
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+            .accessibilityLabel("Menu")
+
+            Text(filter.title)
+                .font(.largeTitle.bold())
+                .padding(.top, 6)
+
+            HStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Titles, transcripts, notes", text: $searchText)
+                        .focused($searchFocused)
+                        .submitLabel(.search)
+                        .autocorrectionDisabled()
+                    if !searchText.isEmpty {
+                        Button("Clear", systemImage: "xmark.circle.fill") { searchText = "" }
+                            .labelStyle(.iconOnly)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .frame(height: 44)
+                .background(Color(.tertiarySystemFill), in: .capsule)
+
+                if searchFocused {
+                    Button("Cancel") {
+                        searchText = ""
+                        searchFocused = false
+                        isSearching = false
+                    }
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
+            .animation(.snappy(duration: 0.25), value: searchFocused)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
     }
 
     private var list: some View {

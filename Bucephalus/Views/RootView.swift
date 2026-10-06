@@ -36,7 +36,11 @@ struct RootView: View {
             HomeView(filter: filter, path: $path, isSearching: $isSearching, openDrawer: { setDrawer(open: true) })
                 // A new accent only reaches views that redraw; rebuild the list when it changes.
                 .id(accentRaw)
-                .offset(x: progress * drawerWidth)
+                // Slide the list with the drawer as a pure render transform, so the navigation bar
+                // doesn't re-lay out its large title on every frame.
+                .visualEffect { [shift = progress * drawerWidth] content, _ in
+                    content.offset(x: shift)
+                }
                 .overlay {
                     Color.black
                         .opacity(0.35 * progress)
@@ -48,13 +52,11 @@ struct RootView: View {
             DrawerView(
                 filter: filter,
                 select: { filter in
-                    self.filter = filter
-                    path = []
+                    showList(filter)
                     setDrawer(open: false)
                 },
                 search: {
-                    filter = .all
-                    path = []
+                    showList(.all)
                     setDrawer(open: false)
                     Task {
                         try? await Task.sleep(for: .milliseconds(300))
@@ -88,6 +90,15 @@ struct RootView: View {
         .gesture(drawerDrag, isEnabled: isDrawerOpen)
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .task {
+            if DemoData.cyclesDrawer {
+                for filter in [MeetingFilter.starred, .all, .starred, .all] {
+                    try? await Task.sleep(for: .milliseconds(900))
+                    setDrawer(open: true)
+                    try? await Task.sleep(for: .milliseconds(900))
+                    showList(filter)
+                    setDrawer(open: false)
+                }
+            }
             if DemoData.opensDrawer { setDrawer(open: true) }
             if DemoData.opensSettings { showingSettings = true }
         }
@@ -109,6 +120,17 @@ struct RootView: View {
                 let predicted = (isDrawerOpen ? drawerWidth : 0) + value.predictedEndTranslation.width
                 setDrawer(open: predicted > drawerWidth / 2)
             }
+    }
+
+    /// Swaps the list without animation, so the title changes in one step under the closing drawer
+    /// instead of cross-fading alongside it.
+    private func showList(_ filter: MeetingFilter) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            self.filter = filter
+            path = []
+        }
     }
 
     private func setDrawer(open: Bool) {

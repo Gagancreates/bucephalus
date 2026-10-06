@@ -59,6 +59,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 aiSection
+                transcriptionSection
                 recordingSection
                 storageSection
                 appearanceSection
@@ -139,6 +140,52 @@ struct SettingsView: View {
             Text("Loading models…")
         } else if let loadError {
             Text("Couldn't load models: \(loadError)")
+        }
+    }
+
+    // MARK: Transcription
+
+    private var transcriptionSection: some View {
+        Section {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Parakeet v2")
+                    Text("English, runs on this iPhone")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                modelState
+            }
+        } header: {
+            Text("Transcription")
+        } footer: {
+            Text("A one-time download of about 450 MB; after that, transcription works offline. Until it's downloaded, Apple's built-in engine is used, which struggles with distant voices.")
+        }
+    }
+
+    @ViewBuilder
+    private var modelState: some View {
+        switch SpeechModelStatus.shared.state {
+        case .ready:
+            Label("Downloaded", systemImage: "checkmark.circle.fill")
+                .labelStyle(.titleAndIcon)
+                .font(.subheadline)
+                .foregroundStyle(.green)
+        case .downloading(let fraction):
+            HStack(spacing: 8) {
+                ProgressView(value: fraction)
+                    .frame(width: 60)
+                Text(fraction.formatted(.percent.precision(.fractionLength(0))))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        case .notDownloaded, .failed:
+            Button("Download") {
+                SpeechModelStatus.shared.state = .downloading(0)
+                Task { try? await ParakeetTranscriber.shared.prepare() }
+            }
+            .buttonStyle(.bordered)
         }
     }
 

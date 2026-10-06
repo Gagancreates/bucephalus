@@ -9,13 +9,13 @@ Meeting notetakers like Granola cover calls on Zoom and Google Meet. Bucephalus 
 ## How it works
 
 1. **Record.** Audio is written to disk continuously and keeps recording with the screen locked.
-2. **Transcribe.** When you stop, Apple's on-device speech model (SpeechAnalyzer) transcribes the file. Audio never leaves the phone.
+2. **Transcribe.** When you stop, NVIDIA's Parakeet model transcribes the file on the phone (via FluidAudio), and works out who spoke when. Audio never leaves the phone.
 3. **Summarise.** The transcript text is sent to the model you choose, which returns an overview, key points, decisions and action items.
 
 ## Features
 
 - Background recording that survives a locked screen and resumes after a phone call
-- On-device transcription, offline after the first model download
+- On-device transcription with Parakeet, offline after a one-time ~450 MB download (Apple's engine as fallback); handles distant voices like a lecturer across a classroom
 - Speaker labels (who said what) on-device with FluidAudio, with tap-to-rename
 - Summaries from OpenAI or Anthropic, using your own API key
 - Model picker that lists the models available to your key
@@ -77,7 +77,9 @@ Bucephalus/
   Models/Meeting.swift       SwiftData model and summary type
   Services/
     AudioRecorder.swift      Background recording and level metering
-    Transcriber.swift        On-device transcription (SpeechAnalyzer)
+    ParakeetTranscriber.swift  On-device transcription (Parakeet via FluidAudio)
+    Transcriber.swift        Apple SpeechAnalyzer fallback
+    SpeakerDiarizer.swift    Speaker labels (FluidAudio)
     Summarizer.swift         OpenAI and Anthropic clients, summary prompt
     MeetingProcessor.swift   Transcribe → summarise pipeline
     Keychain.swift           API key storage

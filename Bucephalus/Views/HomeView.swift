@@ -123,6 +123,14 @@ struct HomeView: View {
                                        systemImage: meeting.isStarred ? "star.slash" : "star") {
                                     meeting.isStarred.toggle()
                                 }
+                                if FileManager.default.fileExists(atPath: meeting.audioURL.path), !meeting.status.isInProgress {
+                                    Button("Transcribe again", systemImage: "arrow.clockwise") {
+                                        meeting.transcript = nil
+                                        meeting.segments = nil
+                                        meeting.summary = nil
+                                        processor.enqueue(meeting)
+                                    }
+                                }
                                 Button("Rename", systemImage: "pencil") {
                                     renameTarget = meeting
                                     renameText = meeting.title

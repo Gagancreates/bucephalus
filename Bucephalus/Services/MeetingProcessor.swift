@@ -7,7 +7,8 @@ import UIKit
 @Observable
 final class MeetingProcessor {
     private var inFlight: Set<UUID> = []
-    private let transcriber: Transcribing = AppleTranscriber()
+    private let transcriber: Transcribing = ParakeetTranscriber.shared
+    private let fallbackTranscriber: Transcribing = AppleTranscriber()
 
     func enqueue(_ meeting: Meeting) {
         guard !inFlight.contains(meeting.id) else { return }
@@ -32,7 +33,15 @@ final class MeetingProcessor {
             if meeting.transcript == nil || meeting.segments == nil {
                 meeting.status = .transcribing
                 save(meeting)
-                let transcription = try await transcriber.transcribe(fileAt: meeting.audioURL)
+                let transcription: Transcription
+                do {
+                    transcription = try await transcriber.transcribe(fileAt: meeting.audioURL)
+                } catch TranscriberError.noSpeech {
+                    throw TranscriberError.noSpeech
+                } catch {
+                    // Parakeet's one-time model download needs internet; Apple's engine works offline.
+                    transcription = try await fallbackTranscriber.transcribe(fileAt: meeting.audioURL)
+                }
 
                 meeting.status = .diarizing
                 save(meeting)

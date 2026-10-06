@@ -157,11 +157,18 @@ struct MeetingDetailView: View {
         default:
             HStack(spacing: 12) {
                 ProgressView()
-                Text(meeting.status == .transcribing ? "Transcribing on this iPhone…" : "\(meeting.status.progressLabel)…")
+                Text(progressText)
                     .foregroundStyle(.secondary)
             }
             .padding(.top, 8)
         }
+    }
+
+    private var progressText: String {
+        if meeting.status == .transcribing, case .downloading(let fraction) = SpeechModelStatus.shared.state {
+            return "Downloading the speech model (one time) · \(fraction.formatted(.percent.precision(.fractionLength(0))))"
+        }
+        return meeting.status == .transcribing ? "Transcribing on this iPhone…" : "\(meeting.status.progressLabel)…"
     }
 
     private var shareText: String? {

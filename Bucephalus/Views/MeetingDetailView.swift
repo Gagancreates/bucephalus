@@ -35,6 +35,13 @@ struct MeetingDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollDismissesKeyboard(.interactively)
+        .task {
+            guard DemoData.toursMeeting else { return }
+            for next in [Tab.transcript, .notes] {
+                try? await Task.sleep(for: .seconds(2.6))
+                withAnimation(.snappy) { tab = next }
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .alert("Rename speaker", isPresented: Binding(get: { renamingSpeaker != nil }, set: { if !$0 { renamingSpeaker = nil } })) {
             TextField("Name", text: $speakerName)

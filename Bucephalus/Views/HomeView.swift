@@ -101,7 +101,18 @@ struct HomeView: View {
                 try? await recording.start()
                 if DemoData.startsMinimized { recording.isMinimized = true }
             }
-            if let demo = DemoData.seedIfRequested(in: modelContext) { path = [demo] }
+            if DemoData.toursMeeting, let demo = DemoData.seedIfRequested(in: modelContext) {
+                try? await Task.sleep(for: .seconds(1.5))
+                path = [demo]
+            } else if let demo = DemoData.seedIfRequested(in: modelContext) {
+                path = [demo]
+            }
+            if DemoData.toursRecording {
+                try? await Task.sleep(for: .seconds(1.5))
+                try? await recording.start()
+                try? await Task.sleep(for: .seconds(4.5))
+                recording.isMinimized = true
+            }
         }
     }
 

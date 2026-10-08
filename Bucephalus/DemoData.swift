@@ -14,6 +14,13 @@ enum DemoData {
     /// `-drawer` and `-settings` open those on launch, for screenshots.
     /// `-cycleDrawer` opens and closes the drawer a few times, switching lists, for recording it.
     static var cyclesDrawer: Bool { ProcessInfo.processInfo.arguments.contains("-cycleDrawer") }
+    /// Scripted tours for recording the launch video (the simulator can't be tapped from a script).
+    /// `-tourRecord`: start a recording from the list, then tuck it into the bar.
+    /// `-tourMeeting`: open a meeting, then flip through its tabs.
+    static var toursRecording: Bool { ProcessInfo.processInfo.arguments.contains("-tourRecord") }
+    static var toursMeeting: Bool { ProcessInfo.processInfo.arguments.contains("-tourMeeting") }
+    /// `-fakeLevels` drives the recorder's waveform with speech-like levels (the simulator mic is near silent).
+    static var fakesLevels: Bool { ProcessInfo.processInfo.arguments.contains("-fakeLevels") }
     static var opensDrawer: Bool { ProcessInfo.processInfo.arguments.contains("-drawer") }
     static var opensSettings: Bool { ProcessInfo.processInfo.arguments.contains("-settings") }
     /// `-activityPreview` shows the Live Activity designs on a lock-screen-like background.

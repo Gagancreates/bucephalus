@@ -119,7 +119,13 @@ final class AudioRecorder {
         elapsed = currentTime
         recorder.updateMeters()
         let db = recorder.averagePower(forChannel: 0)
-        let normalized = CGFloat(max(0, min(1, (db + 50) / 50)))
+        var normalized = CGFloat(max(0, min(1, (db + 50) / 50)))
+        if DemoData.fakesLevels {
+            // Syllable-like bursts with pauses, for the demo video.
+            let t = elapsed
+            let envelope = max(0, sin(t * 2.3) * 0.6 + sin(t * 5.1) * 0.3 + 0.25)
+            normalized = CGFloat(min(1, envelope * Double.random(in: 0.6...1.1)))
+        }
         levels.removeFirst()
         levels.append(normalized)
     }

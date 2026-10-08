@@ -2,7 +2,9 @@ import { loadFont } from "@remotion/google-fonts/Inter";
 import { loadFont as loadSerif } from "@remotion/google-fonts/InstrumentSerif";
 import {
   AbsoluteFill,
+  Audio,
   Img,
+  OffthreadVideo,
   Sequence,
   interpolate,
   spring,
@@ -22,13 +24,15 @@ const MAROON = "#731628";
 
 // Scene lengths in frames (30 fps).
 const SCENES = [
-  { id: "hook", length: 105 },
-  { id: "intro", length: 90 },
-  { id: "record", length: 105 },
-  { id: "lock", length: 105 },
-  { id: "speakers", length: 105 },
-  { id: "summary", length: 95 },
-  { id: "classroom", length: 140 },
+  { id: "hook", length: 100 },
+  { id: "intro", length: 80 },
+  { id: "record", length: 170 },
+  { id: "island", length: 120 },
+  { id: "meeting", length: 200 },
+  { id: "ondevice", length: 140 },
+  { id: "classroom", length: 135 },
+  { id: "cost", length: 125 },
+  { id: "drawer", length: 110 },
   { id: "end", length: 105 },
 ] as const;
 
@@ -71,7 +75,7 @@ const Caption = ({ children, delay = 0, sceneLength }: { children: React.ReactNo
 );
 
 /** A phone with a screenshot, rising in with a gentle spring and a slow drift. */
-const Phone = ({ src, delay = 0, sceneLength, height = 900 }: { src: string; delay?: number; sceneLength: number; height?: number }) => {
+const Phone = ({ src, video, startFrom = 0, delay = 0, sceneLength, height = 900 }: { src?: string; video?: string; startFrom?: number; delay?: number; sceneLength: number; height?: number }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = spring({ frame: frame - delay, fps, config: { damping: 18, stiffness: 90 } });
@@ -90,17 +94,21 @@ const Phone = ({ src, delay = 0, sceneLength, height = 900 }: { src: string; del
         boxShadow: "0 40px 90px rgba(60, 30, 25, 0.22), 0 0 0 10px #1B1714",
       }}
     >
-      <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {video ? (
+        <OffthreadVideo src={staticFile(video)} startFrom={startFrom} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <Img src={staticFile(src!)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      )}
     </div>
   );
 };
 
-const Feature = ({ sceneLength, title, caption, phone }: { sceneLength: number; title: string; caption: string; phone: string }) => (
+const Feature = ({ sceneLength, title, caption, phone, video, startFrom }: { sceneLength: number; title: string; caption: string; phone?: string; video?: string; startFrom?: number }) => (
   <AbsoluteFill style={{ alignItems: "center", paddingTop: 96, gap: 22 }}>
     <Headline sceneLength={sceneLength} size={64}>{title}</Headline>
     <Caption sceneLength={sceneLength} delay={6}>{caption}</Caption>
     <div style={{ marginTop: 34 }}>
-      <Phone src={phone} sceneLength={sceneLength} delay={8} height={860} />
+      <Phone src={phone} video={video} startFrom={startFrom} sceneLength={sceneLength} delay={8} height={860} />
     </div>
   </AbsoluteFill>
 );
@@ -119,29 +127,67 @@ const Hook = () => {
 
 const Intro = () => {
   const n = length("intro");
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const pop = spring({ frame: frame - 4, fps, config: { damping: 14 } });
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 30 }}>
-      <div
-        style={{
-          width: 150,
-          height: 150,
-          borderRadius: 75,
-          background: MAROON,
-          transform: `scale(${pop})`,
-          opacity: interpolate(frame, [n - 12, n], [1, 0], { extrapolateLeft: "clamp" }),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 24px 60px rgba(115, 22, 40, 0.35)",
-        }}
-      >
-        <div style={{ width: 46, height: 46, borderRadius: 23, background: "#fff" }} />
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 22 }}>
+      <Headline sceneLength={n} size={124}>Bucephalus</Headline>
+      <Caption sceneLength={n} delay={10}>A notetaker for conversations in person.</Caption>
+    </AbsoluteFill>
+  );
+};
+
+const Pill = ({ children, delay, sceneLength, strong = false }: { children: React.ReactNode; delay: number; sceneLength: number; strong?: boolean }) => (
+  <div
+    style={{
+      ...useEnter(delay, sceneLength),
+      fontFamily: sans,
+      fontSize: 34,
+      fontWeight: 600,
+      color: strong ? "#fff" : INK,
+      background: strong ? MAROON : "#E9E2DC",
+      padding: "20px 34px",
+      borderRadius: 999,
+    }}
+  >
+    {children}
+  </div>
+);
+
+const OnDevice = () => {
+  const n = length("ondevice");
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 24, padding: 80 }}>
+      <Headline sceneLength={n} size={70}>Everything runs<br /><span style={{ color: MAROON, fontStyle: "italic" }}>on your iPhone.</span></Headline>
+      <Caption sceneLength={n} delay={8}>Open models on the Neural Engine. No uploads, works offline.</Caption>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, marginTop: 30 }}>
+        <Pill sceneLength={n} delay={18}>Parakeet · speech to text</Pill>
+        <Pill sceneLength={n} delay={26}>Speaker detection · who said what</Pill>
+        <Pill sceneLength={n} delay={34} strong>Your audio never leaves the phone</Pill>
       </div>
-      <Headline sceneLength={n} delay={10} size={110}>Bucephalus</Headline>
-      <Caption sceneLength={n} delay={20}>A notetaker for conversations in person.</Caption>
+    </AbsoluteFill>
+  );
+};
+
+const CostRow = ({ label, value, note, delay, sceneLength, highlight = false }: { label: string; value: string; note: string; delay: number; sceneLength: number; highlight?: boolean }) => (
+  <div style={{ ...useEnter(delay, sceneLength), width: "100%", display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "26px 0", borderBottom: "2px solid #E3DBD4", fontFamily: sans }}>
+    <div>
+      <div style={{ fontSize: 36, fontWeight: 600, color: INK }}>{label}</div>
+      <div style={{ fontSize: 26, color: MUTED, marginTop: 6 }}>{note}</div>
+    </div>
+    <div style={{ fontFamily: serif, fontSize: 80, color: highlight ? MAROON : INK }}>{value}</div>
+  </div>
+);
+
+const Cost = () => {
+  const n = length("cost");
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 20, padding: 90 }}>
+      <Headline sceneLength={n} size={70}>And it costs almost nothing.</Headline>
+      <div style={{ width: "100%", marginTop: 30 }}>
+        <CostRow sceneLength={n} delay={10} label="Transcription" note="On-device, unlimited" value="$0" highlight />
+        <CostRow sceneLength={n} delay={18} label="Speaker labels" note="On-device, unlimited" value="$0" highlight />
+        <CostRow sceneLength={n} delay={26} label="Summary" note="Your own OpenAI or Anthropic key" value="~1¢" />
+        <CostRow sceneLength={n} delay={34} label="Subscription" note="Open source" value="None" />
+      </div>
     </AbsoluteFill>
   );
 };
@@ -185,7 +231,7 @@ const End = () => {
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 28 }}>
       <Headline sceneLength={n} size={110}>Bucephalus</Headline>
-      <Caption sceneLength={n} delay={8}>Open source · iPhone · on-device</Caption>
+      <Caption sceneLength={n} delay={8}>Open source · on-device · for iPhone</Caption>
       <div style={{ ...useEnter(18, n), marginTop: 20, fontFamily: sans, fontSize: 34, fontWeight: 600, color: "#fff", background: MAROON, padding: "20px 38px", borderRadius: 999 }}>
         github.com/Gagancreates/bucephalus
       </div>
@@ -193,23 +239,31 @@ const End = () => {
   );
 };
 
-export const Launch = () => (
-  <AbsoluteFill style={{ background: BG }}>
-    <Sequence from={start("hook")} durationInFrames={length("hook")}><Hook /></Sequence>
-    <Sequence from={start("intro")} durationInFrames={length("intro")}><Intro /></Sequence>
-    <Sequence from={start("record")} durationInFrames={length("record")}>
-      <Feature sceneLength={length("record")} title="Press record. Lock your phone." caption="It keeps listening in your pocket or on the table." phone="recording.png" />
-    </Sequence>
-    <Sequence from={start("lock")} durationInFrames={length("lock")}>
-      <Feature sceneLength={length("lock")} title="Pause and stop from the lock screen." caption="Or start it with the Action Button." phone="live-activity.png" />
-    </Sequence>
-    <Sequence from={start("speakers")} durationInFrames={length("speakers")}>
-      <Feature sceneLength={length("speakers")} title="Knows who said what." caption="Transcribed on your iPhone. Audio never leaves it." phone="transcript.png" />
-    </Sequence>
-    <Sequence from={start("summary")} durationInFrames={length("summary")}>
-      <Feature sceneLength={length("summary")} title="A clean summary, instantly." caption="Key points, decisions, action items." phone="summary.png" />
-    </Sequence>
-    <Sequence from={start("classroom")} durationInFrames={length("classroom")}><Classroom /></Sequence>
-    <Sequence from={start("end")} durationInFrames={length("end")}><End /></Sequence>
-  </AbsoluteFill>
-);
+export const Launch = () => {
+  const frame = useCurrentFrame();
+  // Music sits low under everything, ducking slightly during the busiest screens.
+  const music = interpolate(frame, [0, 20, LAUNCH_FRAMES - 45, LAUNCH_FRAMES], [0, 0.42, 0.42, 0], { extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill style={{ background: BG }}>
+      <Audio src={staticFile("music.wav")} volume={music} />
+      <Sequence from={start("hook")} durationInFrames={length("hook")}><Hook /></Sequence>
+      <Sequence from={start("intro")} durationInFrames={length("intro")}><Intro /></Sequence>
+      <Sequence from={start("record")} durationInFrames={length("record")}>
+        <Feature sceneLength={length("record")} title="Press record. Lock your phone." caption="It keeps listening, and tucks away while you browse." video="clips/record.mov" startFrom={105} />
+      </Sequence>
+      <Sequence from={start("island")} durationInFrames={length("island")}>
+        <Feature sceneLength={length("island")} title="Use your phone as normal." caption="The recording lives in the Dynamic Island." video="clips/island.mov" startFrom={15} />
+      </Sequence>
+      <Sequence from={start("meeting")} durationInFrames={length("meeting")}>
+        <Feature sceneLength={length("meeting")} title="Summary, speakers, notes." caption="Knows who said what. Transcribed on-device." video="clips/meeting.mov" startFrom={75} />
+      </Sequence>
+      <Sequence from={start("ondevice")} durationInFrames={length("ondevice")}><OnDevice /></Sequence>
+      <Sequence from={start("classroom")} durationInFrames={length("classroom")}><Classroom /></Sequence>
+      <Sequence from={start("cost")} durationInFrames={length("cost")}><Cost /></Sequence>
+      <Sequence from={start("drawer")} durationInFrames={length("drawer")}>
+        <Feature sceneLength={length("drawer")} title="Search and star everything." caption="Every meeting stays on your phone." video="clips/drawer.mov" startFrom={70} />
+      </Sequence>
+      <Sequence from={start("end")} durationInFrames={length("end")}><End /></Sequence>
+    </AbsoluteFill>
+  );
+};

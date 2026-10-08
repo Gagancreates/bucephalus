@@ -242,7 +242,7 @@ const End = () => {
 export const Launch = () => {
   const frame = useCurrentFrame();
   // Music sits low under everything, ducking slightly during the busiest screens.
-  const music = interpolate(frame, [0, 20, LAUNCH_FRAMES - 45, LAUNCH_FRAMES], [0, 0.42, 0.42, 0], { extrapolateRight: "clamp" });
+  const music = interpolate(frame, [0, 20, LAUNCH_FRAMES - 45, LAUNCH_FRAMES], [0, 0.6, 0.6, 0], { extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ background: BG }}>
       <Audio src={staticFile("music.wav")} volume={music} />

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio",
-    "render": "remotion render Launch out/bucephalus-launch.mp4"
+    "render": "remotion render Launch out/bucephalus-launch.mp4 --audio-bitrate=320k --crf=16"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.534",

@@ -32,6 +32,7 @@ enum DemoData {
             return meeting
         }
 
+        addCompanions(to: context)
         let meeting = Meeting(createdAt: .now.addingTimeInterval(-3 * 3600))
         meeting.audioFileName = audioFileName
         meeting.duration = 34 * 60
@@ -80,6 +81,32 @@ enum DemoData {
             "Arjun to start payment testing with the developer this week.",
         ]
     )
+
+    /// A few more finished meetings so the list looks lived-in for screenshots.
+    private static func addCompanions(to context: ModelContext) {
+        let companions: [(String, Double, Double, Bool, String)] = [
+            ("DBMS Lecture on Normalisation", -1.2, 52, true,
+             "The lecture covered first to third normal form with a student-course example, and when denormalising is worth it."),
+            ("Weekly 1:1 with Meera", -26, 28, false,
+             "Meera and Gagan reviewed the sprint, agreed to cut the export feature from this release, and set goals for next week."),
+            ("Client Call on Website Revamp", -50, 41, true,
+             "The client approved the new homepage direction and asked for a pricing page by Friday."),
+            ("Inventory Forecasting Class", -74, 47, false,
+             "Simple exponential smoothing and Croston's method for intermittent demand, with a worked example on spare parts."),
+        ]
+        for (index, item) in companions.enumerated() {
+            let meeting = Meeting(createdAt: .now.addingTimeInterval(item.1 * 3600))
+            meeting.audioFileName = "demo-\(index).caf"
+            meeting.title = item.0
+            meeting.duration = item.2 * 60
+            meeting.isStarred = item.3
+            meeting.transcript = item.4
+            meeting.segments = [TranscriptSegment(speaker: nil, start: 0, text: item.4)]
+            meeting.summary = MeetingSummary(title: item.0, overview: item.4, keyPoints: [], decisions: [], actionItems: [])
+            meeting.status = .done
+            context.insert(meeting)
+        }
+    }
 
     private static func addSpeakers(to meeting: Meeting) {
         meeting.segments = conversation.map { TranscriptSegment(speaker: $0.0, start: $0.1, text: $0.2) }

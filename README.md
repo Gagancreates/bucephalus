@@ -1,10 +1,18 @@
 # Bucephalus
 
-A notetaker for conversations that happen in person. Press record, put your iPhone on the table, lock it, and talk. When you stop, Bucephalus transcribes the recording on the phone and turns it into a clean summary.
+A notetaker for conversations that happen in person. Press record, put your iPhone on the table, lock it, and talk. When you stop, Bucephalus transcribes the recording on the phone, works out who said what, and turns it into a clean summary.
 
-Meeting notetakers like Granola cover calls on Zoom and Google Meet. Bucephalus covers the ones that happen in a room.
+Meeting notetakers like Granola cover calls on Zoom and Google Meet. Bucephalus covers the ones that happen in a room: meetings, 1:1s, and lectures where the speaker is across the room.
 
-> Early v0. Built for personal use, not on the App Store.
+<p align="center">
+  <img src="docs/screenshots/light/home.png" width="19%" alt="Meetings list">
+  <img src="docs/screenshots/light/recording.png" width="19%" alt="Recording">
+  <img src="docs/screenshots/light/summary.png" width="19%" alt="Summary">
+  <img src="docs/screenshots/light/transcript.png" width="19%" alt="Transcript with speakers">
+  <img src="docs/screenshots/dark/live-activity.png" width="19%" alt="Lock screen Live Activity">
+</p>
+
+> Open source and early. Not on the App Store yet; build it with Xcode (see Setup).
 
 ## How it works
 
@@ -91,3 +99,7 @@ Bucephalus/
 
 - Ask questions across all meetings
 - Action items to Apple Reminders
+
+## License
+
+MIT. See [LICENSE](LICENSE).
